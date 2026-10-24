@@ -1,46 +1,129 @@
-# Student Skill Exchange
+# 🎓 Student Skill Exchange
 
-A Flask web app where students list skills they can teach and skills they want to learn.
-It finds two-way "perfect swaps" (you teach what they want, they teach what you want) and
-manages exchange requests (pending, accepted, declined, completed).
+A web-based platform designed to help students share their skills, learn from one another, and collaborate through peer-to-peer skill exchange.
 
-## Features
-- Sign up / sign in with a college email (no password, demo level)
-- Add or remove skills with levels (Beginner, Intermediate, Advanced)
-- Search who can teach a skill (partial, case-insensitive)
-- Automatic two-way matching, plus a list of one-way helpers
-- Send, accept, decline and complete exchange requests
-- REST API, responsive UI with light/dark mode, `/health` endpoint
-- Seeded demo data: 5 students (try signing in as `ravi@college.edu`)
+## 🌐 Live Demo
 
-## Run locally
+- **Live Website:** https://student-skill-exchange-awky.onrender.com
+- **GitHub Repository:** https://github.com/pavanimandati13-jpg/student-skill-exchange
+
+## 📌 Project Overview
+
+Student Skill Exchange is a Python Flask web application developed to support collaborative learning among students. It provides a platform where students can explore skill-sharing opportunities and connect through the exchange of knowledge and abilities.
+
+The project demonstrates the development and cloud deployment of a web application using Python, Flask, HTML, and cloud hosting services.
+
+## 🎯 Objectives
+
+- Encourage peer-to-peer learning among students.
+- Promote sharing of knowledge and practical skills.
+- Provide a simple interface for skill exchange.
+- Support collaboration and knowledge sharing.
+- Demonstrate cloud-based web application deployment.
+
+## ✨ Features
+
+- **Skill Exchange:** Supports the concept of sharing and learning skills.
+- **Web-Based Interface:** Access the application through a browser.
+- **Simple Design:** Provides an interface for users to interact with the application.
+- **Python Backend:** Uses Flask to handle application logic.
+- **Cloud Deployment:** Hosted on Render for public access.
+
+*Note: The exact available features depend on the implementation in the source code.*
+
+## 🛠️ Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| Python | Application logic |
+| Flask | Web application framework |
+| HTML | Web page structure |
+| CSS | User interface styling |
+| Gunicorn | Production WSGI server |
+| Render | Cloud hosting and deployment |
+| Git | Version control |
+| GitHub | Source code hosting |
+
+## 📂 Project Structure
+
+```text
+student-skill-exchange/
+├── app.py
+├── requirements.txt
+├── README.md
+├── Dockerfile
+├── Procfile
+├── .gitignore
+├── templates/
+└── tests/
 ```
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python app.py            # http://localhost:5000
-python -m unittest discover tests
+
+## ⚙️ Prerequisites
+
+- Python 3.10 or a compatible version
+- pip package manager
+- Git
+- A modern web browser
+
+## 🚀 Run Locally
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/pavanimandati13-jpg/student-skill-exchange.git
 ```
 
-## API
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/users` | Register or sign in by email |
-| GET | `/api/users`, `/api/users/<id>` | List students / profile with skills |
-| POST | `/api/skills` | Add skill `{user_id, skill, kind: offer\|want, level}` |
-| DELETE | `/api/skills/<id>` | Remove skill |
-| GET | `/api/search?skill=python` | Who offers a skill |
-| GET | `/api/matches/<user_id>` | Perfect swaps and one-way helpers |
-| GET/POST | `/api/requests` | List (`?user_id=`) / send request |
-| PATCH | `/api/requests/<id>` | Set status |
-| GET | `/health` | Health check |
+### 2. Navigate to the project directory
 
-## Docker / deploy
+```bash
+cd student-skill-exchange
 ```
-docker build -t skill-exchange .
-docker run -d -p 80:8080 -v skill-data:/data skill-exchange
-```
-Works on any VM (e.g. AWS EC2), Elastic Beanstalk (`Procfile`), Google Cloud Run or Render.
-SQLite is fine for a demo; use a managed database (RDS / Cloud SQL) for multiple instances.
 
-## Possible extensions
-Password or Google login, ratings and reviews after a completed swap, in-app chat, email notifications.
+### 3. Create a virtual environment
+
+```bash
+python -m venv venv
+```
+
+### 4. Activate the virtual environment
+
+**Windows PowerShell:**
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+### 5. Install dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 6. Start the application
+
+```bash
+python app.py
+```
+
+### 7. Open the website
+
+Visit:
+
+http://127.0.0.1:5000
+
+## ☁️ Cloud Deployment
+
+The application is deployed using Render.
+
+**Deployment settings:**
+
+- **Service Type:** Web Service
+- **Branch:** `main`
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `gunicorn app:app`
+
+**Live URL:** https://student-skill-exchange-awky.onrender.com
+
+## 🧪 Testing
+
+The project includes
