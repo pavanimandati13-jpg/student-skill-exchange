@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Skill Exchange</title>
+<style>
+  :root { --bg:#f6f5fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --accent:#7c3aed; --ok:#16a34a; --bad:#dc2626; --line:#e5e7eb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#13111c; --card:#1e1b2b; --text:#f3f4f6; --muted:#a1a1aa; --accent:#a78bfa; --line:#34304a; } }
+  * { box-sizing:border-box; } body { margin:0; font-family:system-ui,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--accent); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { margin:0; font-size:1.35rem; } header span { font-size:.9rem; }
+  main { max-width:960px; margin:0 auto; padding:20px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .tabs button { width:auto; background:var(--card); color:var(--text); border:1px solid var(--line); } .tabs button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  input, select, textarea, button { padding:9px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font-size:.95rem; font-family:inherit; }
+  button { background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:600; } button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); } button.bad { background:var(--bad); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; } .row input, .row select { flex:1; min-width:130px; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px; }
+  .meta { color:var(--muted); font-size:.85rem; } h2 { margin:0 0 10px; font-size:1.05rem; } h3 { margin:0 0 4px; font-size:1rem; }
+  .chip { display:inline-block; padding:3px 10px; border-radius:99px; font-size:.8rem; margin:2px 4px 2px 0; background:#ede9fe; color:#5b21b6; }
+  .chip.want { background:#fef3c7; color:#92400e; } .chip button { background:none; color:inherit; padding:0 0 0 6px; border:none; }
+  .status { font-weight:700; text-transform:capitalize; } .status.accepted,.status.completed { color:var(--ok); } .status.declined { color:var(--bad); }
+  #msg { padding:10px; border-radius:6px; margin-bottom:12px; display:none; } #msg.ok { background:#dcfce7; color:#166534; display:block; } #msg.err { background:#fee2e2; color:#991b1b; display:block; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<header><h1>Student Skill Exchange</h1><span id="who"></span></header>
+<main>
+  <div id="msg"></div>
+
+  <div id="login" class="panel">
+    <h2>Join or sign in</h2>
+    <div class="row"><input id="name" placeholder="Full name"><input id="email" type="email" placeholder="College email"></div>
+    <div class="row"><input id="dept" placeholder="Department"><input id="year" type="number" min="1" max="6" placeholder="Year"></div>
+    <button onclick="login()">Continue</button>
+    <p class="meta">Already registered? Use the same email and you'll get your profile back.</p>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="tabs">
+      <button id="t-browse" onclick="tab('browse')">Find a skill</button>
+      <button id="t-mine" onclick="tab('mine')">My skills</button>
+      <button id="t-matches" onclick="tab('matches')">My matches</button>
+      <button id="t-requests" onclick="tab('requests')">Requests</button>
+      <button class="ghost" onclick="logout()">Sign out</button>
+    </div>
+
+    <section id="browse" class="panel">
+      <h2>Who can teach me?</h2>
+      <div class="row"><input id="q" placeholder="Search a skill, e.g. Python, Guitar" onkeydown="if(event.key==='Enter')browse()"><button onclick="browse()" style="flex:0">Search</button></div>
+      <div id="results"></div>
+    </section>
+
+    <section id="mine" class="panel hidden">
+      <h2>My skills</h2>
+      <div class="row"><input id="skill" placeholder="Skill name"><select id="kind"><option value="offer">I can teach</option><option value="want">I want to learn</option></select>
+        <select id="level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select><button onclick="addSkill()" style="flex:0">Add</button></div>
+      <div id="myskills"></div>
+    </section>
+
+    <section id="matches" class="panel hidden">
+      <h2>Perfect swaps</h2><p class="meta">They teach what you want, and you teach what they want.</p><div id="perfect"></div>
+      <h2 style="margin-top:16px">Others who can teach you</h2><div id="oneway"></div>
+    </section>
+
+    <section id="requests" class="panel hidden"><h2>Exchange requests</h2><div id="reqs"></div></section>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let me = null;
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function show(t, ok) { const m = $('msg'); m.textContent = t; m.className = ok ? 'ok' : 'err'; setTimeout(() => m.className = '', 4000); }
+async function api(path, method = 'GET', body) {
+  const r = await fetch('/api' + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Request failed'); return d;
+}
+async function login() {
+  try {
+    me = await api('/users', 'POST', { name: $('name').value, email: $('email').value, department: $('dept').value, year: $('year').value });
+    try { localStorage.setItem('sx_user', JSON.stringify(me)); } catch (e) {}
+    enter();
+  } catch (e) { show(e.message, false); }
+}
+function enter() { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('who').textContent = 'Signed in as ' + me.name; tab('browse'); }
+function logout() { try { localStorage.removeItem('sx_user'); } catch (e) {} location.reload(); }
+function tab(t) {
+  for (const s of ['browse', 'mine', 'matches', 'requests']) { $(s).classList.toggle('hidden', s !== t); $('t-' + s).classList.toggle('active', s === t); }
+  ({ browse, mine: loadMine, matches: loadMatches, requests: loadReqs })[t]();
+}
+async function browse() {
+  const rows = await api('/search?skill=' + encodeURIComponent($('q').value));
+  $('results').innerHTML = rows.filter(r => r.user_id !== me.id).map(r => `<div class="card"><h3>${esc(r.name)}</h3>
+    <div class="meta">${esc(r.department)} · Year ${r.year}</div><span class="chip">${esc(r.skill)} · ${esc(r.level)}</span>
+    <div class="row" style="margin-top:8px"><input id="off${r.user_id}_${esc(r.skill)}" placeholder="What can you teach in return?">
+    <button style="flex:0" onclick="sendReq(${r.user_id}, '${esc(r.skill).replace(/'/g, "\\'")}', 'off${r.user_id}_${esc(r.skill).replace(/'/g, "\\'")}')">Request</button></div></div>`).join('')
+    || '<p class="meta">No one offers that skill yet.</p>';
+}
+async function sendReq(to, wanted, inputId) {
+  const offered = $(inputId).value.trim(); if (!offered) return show('Say what you can teach in return.', false);
+  try { await api('/requests', 'POST', { from_user: me.id, to_user: to, offered_skill: offered, wanted_skill: wanted }); show('Request sent!', true); } catch (e) { show(e.message, false); }
+}
+async function loadMine() {
+  const u = await api('/users/' + me.id);
+  const chips = k => u.skills.filter(s => s.kind === k).map(s => `<span class="chip ${k}">${esc(s.skill)} · ${esc(s.level)}<button onclick="delSkill(${s.id})">×</button></span>`).join('') || '<span class="meta">None yet</span>';
+  $('myskills').innerHTML = `<h3>I can teach</h3>${chips('offer')}<h3 style="margin-top:12px">I want to learn</h3>${chips('want')}`;
+}
+async function addSkill() {
+  try { await api('/skills', 'POST', { user_id: me.id, skill: $('skill').value, kind: $('kind').value, level: $('level').value }); $('skill').value = ''; loadMine(); } catch (e) { show(e.message, false); }
+}
+async function delSkill(id) { await api('/skills/' + id, 'DELETE'); loadMine(); }
+async function loadMatches() {
+  const m = await api('/matches/' + me.id);
+  $('perfect').innerHTML = m.perfect.map(x => `<div class="card"><h3>${esc(x.name)}</h3><div class="meta">${esc(x.department)} · Year ${x.year}</div>
+    <p>They teach you <b>${esc(x.they_teach)}</b>, you teach them <b>${esc(x.you_teach)}</b>.</p>
+    <button onclick="sendDirect(${x.user_id}, '${esc(x.you_teach).replace(/'/g, "\\'")}', '${esc(x.they_teach).replace(/'/g, "\\'")}')">Propose swap</button></div>`).join('')
+    || '<p class="meta">No perfect swaps yet. Add more skills you offer and want.</p>';
+  $('oneway').innerHTML = m.can_teach_me.map(x => `<div class="card"><b>${esc(x.name)}</b> can teach <span class="chip">${esc(x.they_teach)}</span></div>`).join('') || '<p class="meta">Nobody yet.</p>';
+}
+async function sendDirect(to, offered, wanted) {
+  try { await api('/requests', 'POST', { from_user: me.id, to_user: to, offered_skill: offered, wanted_skill: wanted }); show('Swap proposed!', true); } catch (e) { show(e.message, false); }
+}
+async function loadReqs() {
+  const rows = await api('/requests?user_id=' + me.id);
+  $('reqs').innerHTML = rows.map(r => {
+    const incoming = r.to_user === me.id;
+    const acts = incoming && r.status === 'pending' ? `<button onclick="setStatus(${r.id},'accepted')">Accept</button> <button class="bad" onclick="setStatus(${r.id},'declined')">Decline</button>`
+      : r.status === 'accepted' ? `<button class="ghost" onclick="setStatus(${r.id},'completed')">Mark completed</button>` : '';
+    return `<div class="card"><h3>${incoming ? esc(r.from_name) + ' → you' : 'You → ' + esc(r.to_name)}</h3>
+      <div class="meta">${esc(r.offered_skill)} for ${esc(r.wanted_skill)}</div><div class="status ${r.status}">${r.status}</div><div style="margin-top:6px">${acts}</div></div>`;
+  }).join('') || '<p class="meta">No requests yet.</p>';
+}
+async function setStatus(id, status) { await api('/requests/' + id, 'PATCH', { status }); loadReqs(); }
+try { const s = localStorage.getItem('sx_user'); if (s) { me = JSON.parse(s); enter(); } } catch (e) {}
+</script>
+</body>
+</html>
